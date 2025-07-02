@@ -1,0 +1,9 @@
+Django
+djangorestframework
+django-cors-headers
+aixplain
+reportlab
+python-decouple
+requests
+celery
+redis
