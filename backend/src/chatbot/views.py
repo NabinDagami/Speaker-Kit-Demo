@@ -26,29 +26,31 @@ class ConversationListCreateView(generics.ListCreateAPIView):
         return ConversationSerializer
     
     def get_queryset(self):
-        try:
-            user = self.request.user if self.request.user.is_authenticated else None
-            if user:
-                return Conversation.objects.filter(user=user)
-            else:
-                # For anonymous users, return conversations from session
-                session_conversations = self.request.session.get('conversations', [])
-                return Conversation.objects.filter(id__in=session_conversations)
-        except Exception as e:
-            logger.error(f"Error in get_queryset: {str(e)}")
-            return Conversation.objects.none()
+        # try:
+        #     user = self.request.user if self.request.user.is_authenticated else None
+        #     if user:
+        #         return Conversation.objects.filter(user=user)
+        #     else:
+        #         # For anonymous users, return conversations from session
+        #         session_conversations = self.request.session.get('conversations', [])
+        #         return Conversation.objects.filter(id__in=session_conversations)
+        # except Exception as e:
+        #     logger.error(f"Error in get_queryset: {str(e)}")
+        #     return Conversation.objects.none()
+        return Conversation.objects.all()
     
     def perform_create(self, serializer):
         try:
             user = self.request.user if self.request.user.is_authenticated else None
             conversation = serializer.save(user=user)
-            
             # Store conversation ID in session for anonymous users
             if not user:
                 session_conversations = self.request.session.get('conversations', [])
-                session_conversations.append(str(conversation.id))
-                self.request.session['conversations'] = session_conversations
-                self.request.session.modified = True
+                conv_id = str(conversation.id)
+                if conv_id not in session_conversations:
+                    session_conversations.append(conv_id)
+                    self.request.session['conversations'] = session_conversations
+                    self.request.session.modified = True
         except Exception as e:
             logger.error(f"Error in perform_create: {str(e)}")
             raise
@@ -56,18 +58,24 @@ class ConversationListCreateView(generics.ListCreateAPIView):
 class ConversationDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ConversationSerializer
     permission_classes = [AllowAny]
-    
+
     def get_queryset(self):
-        try:
-            user = self.request.user if self.request.user.is_authenticated else None
-            if user:
-                return Conversation.objects.filter(user=user)
-            else:
-                session_conversations = self.request.session.get('conversations', [])
-                return Conversation.objects.filter(id__in=session_conversations)
-        except Exception as e:
-            logger.error(f"Error in ConversationDetailView get_queryset: {str(e)}")
-            return Conversation.objects.none()
+        # try:
+        #     user = self.request.user if self.request.user.is_authenticated else None
+        #     if user:
+        #         return Conversation.objects.filter(user=user)
+        #     else:
+        #         session_conversations = self.request.session.get('conversations', [])
+        #         return Conversation.objects.filter(id__in=session_conversations)
+        # except Exception as e:
+        #     logger.error(f"Error in ConversationDetailView get_queryset: {str(e)}")
+        #     return Conversation.objects.none()
+        return Conversation.objects.all()
+
+    def perform_destroy(self, instance):
+        # Delete all messages related to the conversation
+        instance.messages.all().delete()
+        instance.delete()
 
 @api_view(['GET'])
 def get_conversation_messages(request, conversation_id):

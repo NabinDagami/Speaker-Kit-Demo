@@ -137,4 +137,7 @@ CSRF_TRUSTED_ORIGINS = [
 # AIxplain Agent Configuration (Updated for correct API)
 AIXPLAIN_API_KEY = os.environ.get('AIXPLAIN_API_KEY', 'faa44950238a5037b4bfd671106f8d95ad686a318b5c05afa525377f18ae7c45')
 AIXPLAIN_BASE_URL = os.environ.get('AIXPLAIN_BASE_URL', 'https://platform-api.aixplain.com/sdk')
-AIXPLAIN_AGENT_ID = os.environ.get('AIXPLAIN_AGENT_ID', '6865437f68a95b7daa729660')
+AIXPLAIN_AGENT_ID = os.environ.get('AIXPLAIN_AGENT_ID', '685b92bd0559b75d7a1a712d')
+
+SESSION_COOKIE_SAMESITE = "Lax"  # Or "None" if using HTTPS
+SESSION_COOKIE_SECURE = False    # True if using HTTPS
