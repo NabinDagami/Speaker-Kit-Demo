@@ -1,0 +1,195 @@
+{
+    "expiry": 1751653754.246617,
+    "data": {
+        "679a80334d6aa81bfab338b3": {
+            "id": "679a80334d6aa81bfab338b3",
+            "name": "Grok 2",
+            "description": "Grok-2 is our state-of-the-art AI assistant with advanced capabilities in both text and vision understanding, integrating real-time information from the \ud835\udd4f platform",
+            "supplier": {
+                "id": 24097,
+                "name": "xAI",
+                "code": "xai"
+            },
+            "version": "grok-2",
+            "license": null,
+            "privacy": {
+                "_value_": "Private",
+                "_name_": "PRIVATE",
+                "__objclass__": "{'_generate_next_value_': <staticmethod(<function Enum._generate_next_value_ at 0x000001E998D93D80>)>, '__module__': 'aixplain.enums.privacy', '__firstlineno__': 27, '__static_attributes__': (), '_new_member_': <built-in method __new__ of type object at 0x00007FFACBAB2700>, '_use_args_': False, '_member_names_': ['PUBLIC', 'PRIVATE', 'RESTRICTED'], '_member_map_': {'PUBLIC': <Privacy.PUBLIC: 'Public'>, 'PRIVATE': <Privacy.PRIVATE: 'Private'>, 'RESTRICTED': <Privacy.RESTRICTED: 'Restricted'>}, '_value2member_map_': {'Public': <Privacy.PUBLIC: 'Public'>, 'Private': <Privacy.PRIVATE: 'Private'>, 'Restricted': <Privacy.RESTRICTED: 'Restricted'>}, '_hashable_values_': ['Public', 'Private', 'Restricted'], '_unhashable_values_': [], '_unhashable_values_map_': {}, '_member_type_': <class 'object'>, '_value_repr_': None, '__doc__': None, 'PUBLIC': <Privacy.PUBLIC: 'Public'>, 'PRIVATE': <Privacy.PRIVATE: 'Private'>, 'RESTRICTED': <Privacy.RESTRICTED: 'Restricted'>, '__new__': <function Enum.__new__ at 0x000001E998D93B00>}",
+                "_sort_order_": 1
+            },
+            "cost": {
+                "price": 1e-05,
+                "unitType": "TOKEN",
+                "unitTypeScale": null
+            },
+            "api_key": "faa44950238a5037b4bfd671106f8d95ad686a318b5c05afa525377f18ae7c45",
+            "additional_info": {
+                "code": "",
+                "parameters": {
+                    "language": [
+                        "en"
+                    ],
+                    "temperature": [
+                        "0"
+                    ],
+                    "top_p": [
+                        "0.7"
+                    ],
+                    "top_k": [
+                        "50"
+                    ],
+                    "max_tokens": [
+                        "2048"
+                    ],
+                    "frequency_penalty": [
+                        "0"
+                    ],
+                    "presence_penalty": [
+                        "0"
+                    ],
+                    "history": [
+                        ""
+                    ]
+                },
+                "inputs": []
+            },
+            "url": "https://models.aixplain.com/api/v1/execute",
+            "backend_url": "https://platform-api.aixplain.com",
+            "function": "text-generation",
+            "is_subscribed": false,
+            "created_at": "2025-01-29 19:37:27.113000+00:00",
+            "input_params": {
+                "text": {
+                    "name": "Text",
+                    "code": "text",
+                    "required": true,
+                    "isFixed": false,
+                    "dataType": "text",
+                    "dataSubType": "text",
+                    "multipleValues": false,
+                    "defaultValues": []
+                },
+                "temperature": {
+                    "name": "Temperature",
+                    "code": "temperature",
+                    "required": false,
+                    "isFixed": false,
+                    "dataType": "number",
+                    "dataSubType": "number",
+                    "multipleValues": false,
+                    "defaultValues": []
+                },
+                "prompt": {
+                    "name": "Prompt",
+                    "code": "prompt",
+                    "required": false,
+                    "isFixed": false,
+                    "dataType": "text",
+                    "dataSubType": "text",
+                    "multipleValues": false
+                },
+                "context": {
+                    "name": "Context",
+                    "code": "context",
+                    "required": false,
+                    "isFixed": false,
+                    "dataType": "text",
+                    "dataSubType": "text",
+                    "multipleValues": false
+                },
+                "language": {
+                    "name": "Language",
+                    "code": "language",
+                    "required": false,
+                    "isFixed": true,
+                    "dataType": "label",
+                    "dataSubType": "label",
+                    "multipleValues": false,
+                    "defaultValues": []
+                },
+                "script": {
+                    "name": "Script",
+                    "code": "script",
+                    "required": false,
+                    "isFixed": true,
+                    "dataType": "label",
+                    "dataSubType": "label",
+                    "multipleValues": false,
+                    "defaultValues": []
+                }
+            },
+            "output_params": {
+                "data": {
+                    "name": "Text",
+                    "code": "data",
+                    "defaultValue": [],
+                    "dataType": "text"
+                }
+            },
+            "model_params": {
+                "text": {
+                    "required": true,
+                    "value": null
+                },
+                "template": {
+                    "required": false,
+                    "value": null
+                },
+                "prompt": {
+                    "required": false,
+                    "value": null
+                },
+                "context": {
+                    "required": false,
+                    "value": null
+                },
+                "language": {
+                    "required": true,
+                    "value": null
+                },
+                "script": {
+                    "required": false,
+                    "value": null
+                },
+                "temperature": {
+                    "required": false,
+                    "value": null
+                },
+                "top_p": {
+                    "required": false,
+                    "value": null
+                },
+                "top_k": {
+                    "required": false,
+                    "value": null
+                },
+                "max_tokens": {
+                    "required": false,
+                    "value": null
+                },
+                "frequency_penalty": {
+                    "required": false,
+                    "value": null
+                },
+                "presence_penalty": {
+                    "required": false,
+                    "value": null
+                },
+                "history": {
+                    "required": false,
+                    "value": null
+                }
+            },
+            "supports_streaming": null,
+            "function_type": {
+                "_value_": "ai",
+                "_name_": "AI",
+                "__objclass__": "{'_generate_next_value_': <staticmethod(<function Enum._generate_next_value_ at 0x000001E998D93D80>)>, '__module__': 'aixplain.enums.function_type', '__firstlineno__': 27, '__static_attributes__': (), '_new_member_': <built-in method __new__ of type object at 0x00007FFACBAB2700>, '_use_args_': False, '_member_names_': ['AI', 'SEGMENTOR', 'RECONSTRUCTOR', 'UTILITY', 'METRIC', 'SEARCH', 'INTEGRATION', 'CONNECTION', 'MCPSERVER'], '_member_map_': {'AI': <FunctionType.AI: 'ai'>, 'SEGMENTOR': <FunctionType.SEGMENTOR: 'segmentor'>, 'RECONSTRUCTOR': <FunctionType.RECONSTRUCTOR: 'reconstructor'>, 'UTILITY': <FunctionType.UTILITY: 'utility'>, 'METRIC': <FunctionType.METRIC: 'metric'>, 'SEARCH': <FunctionType.SEARCH: 'search'>, 'INTEGRATION': <FunctionType.INTEGRATION: 'connector'>, 'CONNECTION': <FunctionType.CONNECTION: 'connection'>, 'MCPSERVER': <FunctionType.MCPSERVER: 'mcpserver'>}, '_value2member_map_': {'ai': <FunctionType.AI: 'ai'>, 'segmentor': <FunctionType.SEGMENTOR: 'segmentor'>, 'reconstructor': <FunctionType.RECONSTRUCTOR: 'reconstructor'>, 'utility': <FunctionType.UTILITY: 'utility'>, 'metric': <FunctionType.METRIC: 'metric'>, 'search': <FunctionType.SEARCH: 'search'>, 'connector': <FunctionType.INTEGRATION: 'connector'>, 'connection': <FunctionType.CONNECTION: 'connection'>, 'mcpserver': <FunctionType.MCPSERVER: 'mcpserver'>}, '_hashable_values_': ['ai', 'segmentor', 'reconstructor', 'utility', 'metric', 'search', 'connector', 'connection', 'mcpserver'], '_unhashable_values_': [], '_unhashable_values_map_': {}, '_member_type_': <class 'object'>, '_value_repr_': None, '__doc__': None, 'AI': <FunctionType.AI: 'ai'>, 'SEGMENTOR': <FunctionType.SEGMENTOR: 'segmentor'>, 'RECONSTRUCTOR': <FunctionType.RECONSTRUCTOR: 'reconstructor'>, 'UTILITY': <FunctionType.UTILITY: 'utility'>, 'METRIC': <FunctionType.METRIC: 'metric'>, 'SEARCH': <FunctionType.SEARCH: 'search'>, 'INTEGRATION': <FunctionType.INTEGRATION: 'connector'>, 'CONNECTION': <FunctionType.CONNECTION: 'connection'>, 'MCPSERVER': <FunctionType.MCPSERVER: 'mcpserver'>, '__new__': <function Enum.__new__ at 0x000001E998D93B00>}",
+                "_sort_order_": 0
+            },
+            "status": "onboarded",
+            "temperature": 0.0
+        }
+    }
+}

@@ -8,7 +8,8 @@ class Conversation(models.Model):
     title = models.CharField(max_length=200, default="New Conversation")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+    aixplain_session_id = models.CharField(max_length=128, blank=True, null=True)
+
     class Meta:
         ordering = ['-updated_at']
     

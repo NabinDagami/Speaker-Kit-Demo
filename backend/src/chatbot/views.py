@@ -84,104 +84,49 @@ def get_conversation_messages(request, conversation_id):
     """
     try:
         logger.info(f"=== GET CONVERSATION MESSAGES START ===")
-        logger.info(f"Conversation ID: {conversation_id}")
-        logger.info(f"Request method: {request.method}")
-        logger.info(f"Request headers: {dict(request.headers)}")
-        
-        # Validate UUID format
         try:
             uuid_obj = uuid.UUID(str(conversation_id))
-            logger.info(f"Valid UUID: {uuid_obj}")
         except ValueError as e:
-            logger.error(f"Invalid UUID format: {conversation_id} - {str(e)}")
-            return Response(
-                {'error': 'Invalid conversation ID format', 'details': str(e)}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Try to get the conversation
+            return Response({'error': 'Invalid conversation ID format'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             conversation = Conversation.objects.get(id=conversation_id)
             logger.info(f"Found existing conversation: {conversation.id}")
-            
-            # Check if conversation has any messages
-            message_count = conversation.messages.count()
-            logger.info(f"Conversation has {message_count} messages")
-            
         except Conversation.DoesNotExist:
             logger.info(f"Conversation {conversation_id} does not exist, creating and initializing...")
-            
-            # Create new conversation
             user = request.user if request.user.is_authenticated else None
             conversation = Conversation.objects.create(
                 id=conversation_id,
                 user=user,
                 title="Speaker Kit Assistant"
             )
-            logger.info(f"Created new conversation: {conversation.id}")
-            
-            # Store in session for anonymous users
-            if not user:
-                session_conversations = request.session.get('conversations', [])
-                session_conversations.append(str(conversation.id))
-                request.session['conversations'] = session_conversations
-                request.session.modified = True
-                logger.info(f"Stored conversation in session")
-            
-            # Initialize with system prompt from prompts.py
-            logger.info("Initializing conversation with system prompt from prompts.py")
-            ai_response = initialize_conversation_with_system_prompt(conversation, request)
-            
-            if ai_response and ai_response.get('success'):
-                # Create initial AI message with the agent's response
-                ai_message = Message.objects.create(
-                    conversation=conversation,
-                    message_type='ai',
-                    content=ai_response['content']
-                )
-                logger.info(f"Created initial AI message: {ai_message.id}")
-                
-                # Store session ID for conversation continuity
-                if ai_response.get('session_id'):
-                    session_key = f'aixplain_session_{conversation.id}'
-                    request.session[session_key] = ai_response['session_id']
-                    request.session.modified = True
-                    logger.info(f"Stored AIxplain session ID: {ai_response['session_id']}")
-                
-                logger.info(f"System prompt initialization successful")
-            else:
-                logger.warning(f"System prompt initialization failed or returned no response")
-                # Create a fallback message
-                fallback_message = Message.objects.create(
-                    conversation=conversation,
-                    message_type='ai',
-                    content="Hi there! I'm here to help you build your speaker kit. Let's start with the cover page — this will make a bold first impression, so we want it to reflect your brand at its best. Ready? Let's go.\n\nWhat's your full name, exactly as you'd like it to appear on the cover?"
-                )
-                logger.info(f"Created fallback AI message: {fallback_message.id}")
-        
-        # Get messages for the conversation
+            # Initialize agent and store session_id in DB
+            from .services.agent import AIxplainService
+            ai_service = AIxplainService()
+            ai_response = ai_service.initialize_conversation()
+            session_id = ai_response.get('session_id')
+            if session_id:
+                conversation.aixplain_session_id = session_id
+                conversation.save()
+            # Save initial AI message
+            Message.objects.create(
+                conversation=conversation,
+                message_type='ai',
+                content=ai_response.get('content', '[No response from agent]')
+            )
+
+        # Return all messages
         messages = conversation.messages.all().order_by('timestamp')
         serializer = MessageSerializer(messages, many=True, context={'request': request})
-        
-        response_data = {
+        return Response({
             'conversation_id': str(conversation.id),
             'title': conversation.title,
             'messages': serializer.data
-        }
-        
-        logger.info(f"=== GET CONVERSATION MESSAGES SUCCESS ===")
-        logger.info(f"Returning {len(serializer.data)} messages")
-        
-        return Response(response_data)
-        
+        })
     except Exception as e:
-        logger.error(f"=== GET CONVERSATION MESSAGES ERROR ===")
         logger.error(f"Error in get_conversation_messages: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
-        return Response(
-            {'error': f'Internal server error: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({'error': f'Internal server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
@@ -191,280 +136,122 @@ def send_message(request, conversation_id):
     """
     try:
         logger.info(f"=== SEND MESSAGE START ===")
-        logger.info(f"Conversation ID: {conversation_id}")
-        logger.info(f"Request method: {request.method}")
-        logger.info(f"Request content type: {request.content_type}")
-        logger.info(f"Request data keys: {list(request.data.keys())}")
-        logger.info(f"Request FILES keys: {list(request.FILES.keys())}")
-        
-        # Validate UUID format
         try:
             uuid_obj = uuid.UUID(str(conversation_id))
-            logger.info(f"Valid UUID: {uuid_obj}")
         except ValueError as e:
-            logger.error(f"Invalid UUID format: {conversation_id} - {str(e)}")
-            return Response(
-                {'error': 'Invalid conversation ID format', 'details': str(e)}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Get message content and image
+            return Response({'error': 'Invalid conversation ID format'}, status=status.HTTP_400_BAD_REQUEST)
+
         content = request.data.get('content', '').strip()
         image = request.FILES.get('image')
-        
-        logger.info(f"Message content: '{content}'")
-        logger.info(f"Image provided: {image is not None}")
-        
         if not content and not image:
-            logger.error("No content or image provided")
-            return Response(
-                {'error': 'Message content or image is required'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Get or create conversation
+            return Response({'error': 'Message content or image is required'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             conversation = Conversation.objects.get(id=conversation_id)
-            logger.info(f"Found existing conversation: {conversation.id}")
         except Conversation.DoesNotExist:
-            logger.info(f"Creating new conversation: {conversation_id}")
-            # Create new conversation if it doesn't exist
             user = request.user if request.user.is_authenticated else None
             conversation = Conversation.objects.create(
                 id=conversation_id,
                 user=user,
                 title="Speaker Kit Assistant"
             )
-            logger.info(f"Created new conversation: {conversation.id}")
-            
-            # Store in session for anonymous users
-            if not user:
-                session_conversations = request.session.get('conversations', [])
-                session_conversations.append(str(conversation.id))
-                request.session['conversations'] = session_conversations
-                request.session.modified = True
-                logger.info(f"Stored conversation in session")
-            
-            # For new conversations, initialize with system prompt
-            logger.info("Initializing new conversation with system prompt")
-            ai_response = initialize_conversation_with_system_prompt(conversation, request)
-            
-            if ai_response and ai_response.get('success'):
-                # Create initial AI message
-                initial_ai_message = Message.objects.create(
-                    conversation=conversation,
-                    message_type='ai',
-                    content=ai_response['content']
-                )
-                logger.info(f"Created initial system prompt message: {initial_ai_message.id}")
-                
-                # Store session ID
-                if ai_response.get('session_id'):
-                    session_key = f'aixplain_session_{conversation.id}'
-                    request.session[session_key] = ai_response['session_id']
-                    request.session.modified = True
-                    logger.info(f"Stored AIxplain session ID: {ai_response['session_id']}")
-            else:
-                logger.warning("System prompt initialization failed, continuing without it")
-        
-        # Create user message
-        logger.info("Creating user message...")
-        try:
-            user_message = Message.objects.create(
+            # Initialize agent and store session_id in DB
+            from .services.agent import AIxplainService
+            ai_service = AIxplainService()
+            ai_response = ai_service.initialize_conversation()
+            session_id = ai_response.get('session_id')
+            if session_id:
+                conversation.aixplain_session_id = session_id
+                conversation.save()
+            # Save initial AI message
+            Message.objects.create(
                 conversation=conversation,
-                message_type='user',
-                content=content,
-                image=image
+                message_type='ai',
+                content=ai_response.get('content', '[No response from agent]')
             )
-            logger.info(f"Created user message: {user_message.id}")
-        except Exception as e:
-            logger.error(f"Error creating user message: {str(e)}")
-            return Response(
-                {'error': f'Failed to create user message: {str(e)}'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        # Get AIxplain session ID for this conversation
-        session_key = f'aixplain_session_{conversation.id}'
-        aixplain_session_id = request.session.get(session_key)
-        logger.info(f"Using AIxplain session ID: {aixplain_session_id}")
 
-        # --- FIX: Re-initialize session if missing ---
-        if not aixplain_session_id:
-            logger.warning("Session ID missing, attempting to re-initialize with system prompt")
-            ai_response = initialize_conversation_with_system_prompt(conversation, request)
-            if ai_response and ai_response.get('session_id'):
-                request.session[session_key] = ai_response['session_id']
-                request.session.modified = True
-                aixplain_session_id = ai_response['session_id']
-                logger.info(f"Re-initialized and stored AIxplain session ID: {aixplain_session_id}")
-            else:
-                logger.error("Failed to re-initialize session with system prompt")
-        # --- END FIX ---
-
-        
-        # Get agent response to user's message
-        logger.info("Getting agent response...")
-        ai_response_result = continue_conversation_with_agent(
+        # Save user message
+        user_message = Message.objects.create(
             conversation=conversation,
-            user_content=content,
-            image=image,
-            session_id=aixplain_session_id
+            message_type='user',
+            content=content,
+            image=image
         )
-        
-        # Check if we got a successful response
-        if ai_response_result and ai_response_result.get('success'):
-            ai_content = ai_response_result['content']
-            logger.info(f"Agent response length: {len(ai_content)}")
-            
-            # Update session ID if provided
-            if ai_response_result.get('session_id'):
-                request.session[session_key] = ai_response_result['session_id']
-                request.session.modified = True
-                logger.info(f"Updated AIxplain session ID: {ai_response_result['session_id']}")
-            
-            # Create AI message with actual response
-            try:
-                ai_message = Message.objects.create(
-                    conversation=conversation,
-                    message_type='ai',
-                    content=ai_content
-                )
-                logger.info(f"Created AI message: {ai_message.id}")
-            except Exception as e:
-                logger.error(f"Error creating AI message: {str(e)}")
-                return Response(
-                    {'error': f'Failed to create AI message: {str(e)}'}, 
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-            
-            # Serialize messages
-            try:
-                user_message_data = MessageSerializer(user_message, context={'request': request}).data
-                ai_message_data = MessageSerializer(ai_message, context={'request': request}).data
-                
-                response_data = {
-                    'user_message': user_message_data,
-                    'ai_message': ai_message_data,
-                    'conversation_id': str(conversation.id)
-                }
-                
-                logger.info("=== SEND MESSAGE SUCCESS ===")
-                return Response(response_data, status=status.HTTP_201_CREATED)
-                
-            except Exception as e:
-                logger.error(f"Error serializing messages: {str(e)}")
-                return Response(
-                    {'error': f'Failed to serialize messages: {str(e)}'}, 
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        
-        else:
-            # Agent failed - create error message
-            error_content = "Something went wrong. Please try again."
-            error_details = ai_response_result.get('error', 'Unknown error') if ai_response_result else 'No response from agent'
-            logger.error(f"Agent failed: {error_details}")
-            
-            # Create AI error message
-            try:
-                ai_message = Message.objects.create(
-                    conversation=conversation,
-                    message_type='ai',
-                    content=error_content
-                )
-                logger.info(f"Created AI error message: {ai_message.id}")
-            except Exception as e:
-                logger.error(f"Error creating AI error message: {str(e)}")
-                return Response(
-                    {'error': f'Failed to create error message: {str(e)}'}, 
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-            
-            # Serialize messages
-            try:
-                user_message_data = MessageSerializer(user_message, context={'request': request}).data
-                ai_message_data = MessageSerializer(ai_message, context={'request': request}).data
-                
-                response_data = {
-                    'user_message': user_message_data,
-                    'ai_message': ai_message_data,
-                    'conversation_id': str(conversation.id),
-                    'agent_error': True,
-                    'agent_error_details': error_details
-                }
-                
-                logger.info("=== SEND MESSAGE WITH ERROR ===")
-                return Response(response_data, status=status.HTTP_201_CREATED)
-                
-            except Exception as e:
-                logger.error(f"Error serializing error messages: {str(e)}")
-                return Response(
-                    {'error': f'Failed to serialize error messages: {str(e)}'}, 
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        
+
+        # Always use session_id from DB
+        session_id = conversation.aixplain_session_id
+        logger.info(f"Using session_id for conversation {conversation.id}: {session_id}")  # <--- ADD HERE
+
+        if not session_id:
+            # Re-initialize if missing
+            from .services.agent import AIxplainService
+            ai_service = AIxplainService()
+            ai_response = ai_service.initialize_conversation()
+            session_id = ai_response.get('session_id')
+            if session_id:
+                conversation.aixplain_session_id = session_id
+                conversation.save()
+
+        # Get agent response
+        from .services.agent import AIxplainService
+        ai_service = AIxplainService()
+        ai_response = ai_service.continue_conversation(content, session_id)
+        logger.info(f"Agent returned session_id: {ai_response.get('session_id')}")  # <--- ADD HERE
+
+        # Update session_id if changed
+        new_session_id = ai_response.get('session_id')
+        if new_session_id and new_session_id != conversation.aixplain_session_id:
+            conversation.aixplain_session_id = new_session_id
+            conversation.save()
+
+        # Save AI message
+        ai_message = Message.objects.create(
+            conversation=conversation,
+            message_type='ai',
+            content=ai_response.get('content', '[No response from agent]')
+        )
+
+        # Serialize and return
+        user_message_data = MessageSerializer(user_message, context={'request': request}).data
+        ai_message_data = MessageSerializer(ai_message, context={'request': request}).data
+        return Response({
+            'user_message': user_message_data,
+            'ai_message': ai_message_data,
+            'conversation_id': str(conversation.id)
+        }, status=status.HTTP_201_CREATED)
+
     except Exception as e:
-        logger.error(f"=== SEND MESSAGE CRITICAL ERROR ===")
         logger.error(f"Critical error in send_message: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
-        return Response(
-            {'error': f'Critical server error: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({'error': f'Critical server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def initialize_conversation_with_system_prompt(conversation, request):
     """
-    Initialize a new conversation by sending the system prompt from prompts.py to AIxplain
+    Initialize a new conversation by sending a greeting to the agent (uses agent's built-in instructions)
     """
     try:
-        logger.info("=== INITIALIZING CONVERSATION WITH SYSTEM PROMPT ===")
-        
-        # Import here to avoid circular imports
-        try:
-            from .services.agent import AIxplainService
-            logger.info("Agent service imported successfully")
-        except ImportError as e:
-            logger.error(f"Failed to import agent service: {e}")
-            return None
-        
-        # Get the system prompt from prompts.py
-        try:
-            system_prompt = get_speaker_kit_system_prompt()
-            logger.info(f"System prompt length: {len(system_prompt)}")
-            logger.info(f"System prompt preview: {system_prompt[:200]}...")
-        except Exception as e:
-            logger.error(f"Failed to get system prompt: {str(e)}")
-            return None
-        
-        # Initialize agent service
-        try:
-            ai_service = AIxplainService()
-            logger.info("AIxplain service initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize AIxplain service: {str(e)}")
-            return None
-        
-        # Send system prompt to AIxplain to initialize the conversation
-        logger.info("Sending system prompt to AIxplain...")
-        try:
-            ai_response = ai_service.initialize_with_system_prompt(system_prompt)
-            
-            if ai_response and ai_response.get('success'):
-                logger.info(f"System prompt initialization successful")
-                logger.info(f"Agent response preview: {ai_response['content'][:200]}...")
-                return ai_response
+        logger.info("=== INITIALIZING CONVERSATION WITH AGENT SDK ===")
+        from .services.agent import AIxplainService
+        ai_service = AIxplainService()
+        ai_response = ai_service.initialize_conversation()
+        session_id = ai_response.get('session_id')
+        if session_id:
+            conversation.aixplain_session_id = session_id
+            conversation.save()
+        if ai_response and ai_response.get('success'):
+            logger.info(f"Agent initialization successful")
+            content = ai_response.get('content')
+            if isinstance(content, str):
+                logger.info(f"Agent response preview: {content[:200]}...")
             else:
-                error_msg = ai_response.get('error', 'Unknown error') if ai_response else 'No response'
-                logger.error(f"System prompt initialization failed: {error_msg}")
-                return None
-                
-        except Exception as e:
-            logger.error(f"Exception during system prompt initialization: {str(e)}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
+                logger.info(f"Agent response preview: {content}")
+            return ai_response
+        else:
+            error_msg = ai_response.get('error', 'Unknown error') if ai_response else 'No response'
+            logger.error(f"Agent initialization failed: {error_msg}")
             return None
-            
     except Exception as e:
-        logger.error(f"Critical error initializing conversation with system prompt: {str(e)}")
+        logger.error(f"Critical error initializing conversation: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         return None
 
